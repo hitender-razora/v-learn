@@ -1,30 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Configures the Camel Context-->
+<!-- Configures the Camel Context -->
 
 <beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
        http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
 
-  <camelContext xmlns="http://camel.apache.org/schema/spring">
-    <!-- here is a sample which processes the input files
-         (leaving them in place - see the 'noop' flag)
-         then performs content based routing on the message using XPath -->
-    <route>
-      <from uri="file:src/data?noop=true"/>
-      <choice>
-        <when>
-          <xpath>/person/city = 'London'</xpath>
-          <log message="UK message"/>
-          <to uri="file:target/messages/uk"/>
-        </when>
-        <otherwise>
-          <log message="Other message"/>
-          <to uri="file:target/messages/others"/>
-        </otherwise>
-      </choice>
-    </route>
-  </camelContext>
-
+	<camelContext xmlns="http://camel.apache.org/schema/spring">
+		<!-- Route to pick the message from AMQ and writing a file with name set as header -->
+		<route>
+			<from uri="activemq:queue:foo.bar" />
+			<setHeader headerName="myFileName">
+					<xpath>/name/firstName/text()</xpath>
+			</setHeader>
+			<multicast>
+				<to uri="log:test.log" />
+				
+				<to uri="file:src/data/?fileName=${header.myFileName}&amp;noop=true" />
+<!-- 				<pipeline> -->
+<!-- 					<to uri="bean:validateOrder"/> -->
+<!-- 					<to uri="bean:registerOrder"/> -->
+<!-- 				</pipeline> -->
+			</multicast>
+		</route>
+	</camelContext>
+	
+	<bean id="redeliveryPolicy" class="org.apache.activemq.RedeliveryPolicy">
+		<property name="maximumRedeliveries" value="7" />
+	</bean>
+	<bean id="jmsConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+		<property name="brokerURL"
+			value="failover:tcp://localhost:61615?wireFormat.maxInactivityDuration=0" />
+		<property name="redeliveryPolicy" ref="redeliveryPolicy" />
+	</bean>
+	<bean id="pooledJmsConnectionFactory" class="org.apache.activemq.pool.PooledConnectionFactory">
+		<property name="connectionFactory" ref="jmsConnectionFactory" />
+	</bean>
+	<bean id="jmsTransactionManager"
+		class="org.springframework.jms.connection.JmsTransactionManager">
+		<property name="connectionFactory" ref="pooledJmsConnectionFactory" />
+	</bean>
+	<bean id="activemq" class="org.apache.activemq.camel.component.ActiveMQComponent">
+		<property name="connectionFactory" ref="pooledJmsConnectionFactory" />
+		<property name="transacted" value="true" />
+		<property name="transactionManager" ref="jmsTransactionManager" />
+	</bean>
+	
 </beans>
