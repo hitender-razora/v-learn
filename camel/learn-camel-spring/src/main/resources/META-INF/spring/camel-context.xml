@@ -11,17 +11,14 @@
 		<!-- Route to pick the message from AMQ and writing a file with name set as header -->
 		<route>
 			<from uri="activemq:queue:foo.bar" />
+			
 			<setHeader headerName="myFileName">
 					<xpath>/name/firstName/text()</xpath>
 			</setHeader>
+			
 			<multicast>
 				<to uri="log:test.log" />
-				
 				<to uri="file:src/data/?fileName=${header.myFileName}&amp;noop=true" />
-<!-- 				<pipeline> -->
-<!-- 					<to uri="bean:validateOrder"/> -->
-<!-- 					<to uri="bean:registerOrder"/> -->
-<!-- 				</pipeline> -->
 			</multicast>
 		</route>
 	</camelContext>
