@@ -23,11 +23,16 @@ public class WordCount {
 
     public void map(Object key, Text value, Context context
                     ) throws IOException, InterruptedException {
+    	System.out.println("MAPPERR STARTS ############");
+    	System.out.println("Mapper Key: " + key + "Value: " + value);
       StringTokenizer itr = new StringTokenizer(value.toString());
       while (itr.hasMoreTokens()) {
-        word.set(itr.nextToken());
+        String nextToken = itr.nextToken();
+		word.set(nextToken);
+        System.out.println(nextToken.toUpperCase());
         context.write(word, one);
       }
+      System.out.println("MAPPERR ENDS ############");
     }
   }
 
@@ -38,12 +43,16 @@ public class WordCount {
     public void reduce(Text key, Iterable<IntWritable> values,
                        Context context
                        ) throws IOException, InterruptedException {
-      int sum = 0;
+System.out.println("Reducer Starts ############");
+    	int sum = 0;
       for (IntWritable val : values) {
         sum += val.get();
+        System.out.println("Reducer KEY: " + key + "Values: " + val);
       }
       result.set(sum);
+      System.out.println("Reducer KEY-SUM: " + key + "-" + sum);
       context.write(key, result);
+      System.out.println("Reducer ENDS ##############");
     }
   }
 
